@@ -34,7 +34,7 @@ def main():
         jsondata=convert(source)
         json_obj=json.loads(jsondata)
 
-    minsoc = '{"value": 25}' # Standard Minimum State of Charge - ausser Netzausfall
+    minsoc = '{"value": 30}' # Standard Minimum State of Charge - ausser Netzausfall
     if "112069000" not in json_obj["warnings"]:
         print("Keine Warnung vorhanden")
     else:
@@ -56,7 +56,7 @@ def main():
     pubclient.connect(broker_address, port, 60)
 
     print("setting minsoc to ",minsoc)
-    ret = pubclient.publish('W/64cfd98935c5/settings/0/Settings/CGwacs/BatteryLife/MinimumSocLimit',minsoc)
+    ret = pubclient.publish('W/<placeholder>/settings/0/Settings/CGwacs/BatteryLife/MinimumSocLimit',minsoc)
     pubclient.disconnect()
 
     print(ret)
