@@ -6,6 +6,10 @@ This script is used to set Victron System minimum battery state of charge (Minim
 ```console
 pip install -r requirements.txt
 ```
+# Find your Area ID
+
+[Google Earth KML File](https://maps.dwd.de/geoserver/dwd/wms?service=WMS&version=1.1.0&request=GetMap&layers=dwd:Warngebiete_Kreise&styles=&bbox=5.86625035072566,47.2701236047002,15.0418156516163,55.0583836008072&width=768&height=651&srs=EPSG:4326&format=application%2Fvnd.google-earth.kml%2Bxml) 
+Each Area details contain a unique WARNCELLID 
 
 # Help
 
