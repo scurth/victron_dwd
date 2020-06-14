@@ -9,7 +9,7 @@ pip install -r requirements.txt
 
 # Help
 
-::: tip
+```console
 ./dwd-warning.py -h
 Usage: dwd_warning.py -s XXX [-v] [-b] [-p] [-u] [-r] [-h]
 -v: verbose output, default False
@@ -19,4 +19,4 @@ Usage: dwd_warning.py -s XXX [-v] [-b] [-p] [-u] [-r] [-h]
 -s: Victron Serial Number, mandatory, no default
 -u: DWD warnings.json url, default https://www.dwd.de/DWD/warnungen/warnapp/json/warnings.json
 -h: shows this help
-:::
+```
