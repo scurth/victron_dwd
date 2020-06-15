@@ -27,4 +27,4 @@ Usage: dwd_warning.py -s XXX [-v] [-b] [-p] [-u] [-r] [-h]
 
 # Project Documentation
 
-[IoT Rebell Blog](/projekte/007_VRM_victronenergy_DWD.html)
+[IoT Rebell Blog](https://www.sascha-curth.de/projekte/007_VRM_victronenergy_DWD.html)
