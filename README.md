@@ -24,3 +24,7 @@ Usage: dwd_warning.py -s XXX [-v] [-b] [-p] [-u] [-r] [-h]
 -u: DWD warnings.json url, default https://www.dwd.de/DWD/warnungen/warnapp/json/warnings.json
 -h: shows this help
 ```
+
+# Project Documentation
+
+[IoT Rebell Blog](/projekte/007_VRM_victronenergy_DWD.html)

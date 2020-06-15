@@ -103,7 +103,7 @@ def main(argv=None):
     else:
         myregion=json_obj["warnings"][region]
 
-        if myregion[0]["type"] in [0,2] and myregion[0]["level"] in [3, 4, 5]:
+        if myregion[0]["level"] in [3, 4, 5]:
             print("Alert Level ",myregion[0]["level"])
             print("Start => ",myregion[0]["start"])
             print("End => " , myregion[0]["end"])
@@ -114,6 +114,11 @@ def main(argv=None):
             if alert_end_plus_buffer > timestamp or alert_start_minus_buffer > timestamp:
                 print ("Setting SOC to 50%")
                 minsoc = '{"value": 50}'
+                url = 'http://192.168.0.99:3000/api/annotations'
+                data = urllib.urlencode({'dashboardId' : 'QVQen2Zgz', 'panelId' : '58', 'time' : myregion[0]["start"], 'timeEnd': myregion[0]["end"], 'text' : myregion[0]["description"])
+                req = urllib2.Request(url, data)
+                response = urllib2.urlopen(req)
+                print response.read()
 
     pubclient = mqttClient.Client("writer")
     pubclient.on_publish = on_publish                          #assign function to callback
@@ -122,11 +127,13 @@ def main(argv=None):
     if (verbose is True):
         print("setting minsoc to ",minsoc)
 
-    ret = pubclient.publish(topic,minsoc)
+    #ret = pubclient.publish(topic,minsoc)
     pubclient.disconnect()
 
-    if (verbose is True):
-        print(ret)
+    #if (verbose is True):
+    #    print(ret)
+
+
 
 if __name__ == "__main__":
     main()
