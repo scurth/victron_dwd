@@ -15,9 +15,10 @@ Each Area details contain a unique WARNCELLID
 
 ```console
 ./dwd-warning.py -h
-Usage: dwd_warning.py -s XXX [-v] [-b] [-p] [-u] [-r] [-h]
+Usage: dwd_warning.py -s XXX [-v] [-b] [-p] [-u] [-r] [-h] [-n]
 -v: verbose output, default False
 -b: MQTT Broker IP, default 127.0.0.1
+-n: dry run, no MQTT message sent
 -p: MQTT Broker Port, default 1883
 -r: DWD region, default 112069000 = Potsdam-Mittelmark
 -s: Victron Serial Number, mandatory, no default
