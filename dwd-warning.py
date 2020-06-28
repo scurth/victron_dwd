@@ -11,6 +11,7 @@ timestamp = int(time.time()) * 1000
 broker = "127.0.0.1"
 port = 1883
 verbose = False
+dryrun = False
 url = "https://www.dwd.de/DWD/warnungen/warnapp/json/warnings.json"
 region = "112069000"
 
@@ -31,9 +32,10 @@ def on_publish(client,userdata,result):             #create function for callbac
     pass
 
 def usage():
-    print("Usage: dwd_warning.py -s XXX [-v] [-b] [-p] [-u] [-r] [-h]")
+    print("Usage: dwd_warning.py -s XXX [-v] [-b] [-p] [-u] [-r] [-h] [-n]")
     print("-v: verbose output, default False")
     print("-b: MQTT Broker IP, default 127.0.0.1")
+    print("-n: dry run, no MQTT message sent")
     print("-p: MQTT Broker Port, default 1883")
     print("-r: DWD region, default 112069000 = Potsdam-Mittelmark")
     print("-s: Victron Serial Number, mandatory, no default") 
@@ -45,7 +47,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
     try:
-        options, prog_argv = getopt.getopt(argv[1:], "hb:p:r:s:u:v", ["help", "broker=","port=","region=","serial=","url=","verbose"])
+        options, prog_argv = getopt.getopt(argv[1:], "hnb:p:r:s:u:v", ["help", "broker=","dry-run", "port=","region=","serial=","url=","verbose"])
     except getopt.GetoptError:
         sys.exit(1) 
 
@@ -59,6 +61,9 @@ def main(argv=None):
         elif name in ("-b", "--broker"):
             global broker
             broker = value
+        elif name in ("-n", "--dry-run"):
+            global dryrun
+            dryrun = True
         elif name in ("-u", "--url"):
             global url
             url = value
@@ -86,7 +91,7 @@ def main(argv=None):
        sys.exit()
 
     if (verbose is True):
-        print("Using broker: ", broker, " on port: ", port)
+        print("Using broker: ", broker, "  at port: ", port)
         print("Using DWD URL:", url, "and Region: ", region)
         print("Topic: ", topic)
 
@@ -103,7 +108,7 @@ def main(argv=None):
     else:
         myregion=json_obj["warnings"][region]
 
-        if myregion[0]["type"] in [0,2] and myregion[0]["level"] in [3, 4, 5]:
+        if myregion[0]["type"] in [0,2] and myregion[0]["level"] in [4, 5]:
             print("Alert Level ",myregion[0]["level"])
             print("Start => ",myregion[0]["start"])
             print("End => " , myregion[0]["end"])
@@ -122,11 +127,16 @@ def main(argv=None):
     if (verbose is True):
         print("setting minsoc to ",minsoc)
 
-    ret = pubclient.publish(topic,minsoc)
-    pubclient.disconnect()
+    if (dryrun is True):
+        print ("MQTT Broker: ", broker," at port ",port)
+        print ("Topic: ", topic)
+        print ("Message: ", minsoc)
+    else:
+        ret = pubclient.publish(topic,minsoc)
+        pubclient.disconnect()
 
-    if (verbose is True):
-        print(ret)
+        if (verbose is True):
+            print(ret)
 
 if __name__ == "__main__":
     main()
