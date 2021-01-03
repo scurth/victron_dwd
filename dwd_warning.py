@@ -5,7 +5,7 @@ import getopt
 import json
 import time
 import paho.mqtt.client as mqttClient
-import URLlib.request
+import urllib.request
 
 TIMESTAMP = int(time.time()) * 1000
 BROKER = "127.0.0.1"
@@ -98,7 +98,7 @@ def main(argv=None):
 
 
 #    with open('warnings.jsonp', encoding='utf-8') as fh:
-    with URLlib.request.URLopen(URL) as response:
+    with urllib.request.urlopen(URL) as response:
         source = response.read().decode('utf-8')
         jsondata = convert(source)
         json_obj = json.loads(jsondata)
