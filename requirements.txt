@@ -1,2 +1,2 @@
-paho-mqtt==1.4.0
+paho-mqtt~=1.6.1
 urllib3==1.26.18
