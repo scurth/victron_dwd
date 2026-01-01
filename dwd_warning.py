@@ -150,10 +150,10 @@ def determine_minsoc(warning_data, region_id, current_timestamp, verbose_output=
         # Logic from original script: alert if current time is within buffered window OR buffered start is in future
         # This simplifies to: if the effective end of the warning (including buffer) is after the current time.
         if effective_end_ms > current_timestamp:
-            # Use alert MinSOC, but ensure it's at least as high as seasonal
-            effective_alert_minsoc = max(ALERT_MINSOC, seasonal_minsoc)
+            # Use highest seasonal MinSOC during alerts
+            effective_alert_minsoc = max(SEASONAL_MINSOC.values())
             if verbose_output:
-                print(f"Alert conditions met for region {region_id}. Setting MinSoc to {effective_alert_minsoc}% (alert override).")
+                print(f"Alert conditions met for region {region_id}. Setting MinSoc to {effective_alert_minsoc}% (highest seasonal level).")
             return f'{{"value": {effective_alert_minsoc}}}'
         else:
             if verbose_output:
