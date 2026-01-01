@@ -1,6 +1,7 @@
 import json
 import urllib.request
 
+
 def convert(jsonp_text: str):
     """Converts a JSONP string to a JSON string by stripping the function call wrapper."""
     if not isinstance(jsonp_text, str):

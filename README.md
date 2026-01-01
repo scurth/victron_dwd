@@ -4,7 +4,32 @@ This script is used to set Victron System minimum battery state of charge (Minim
 # Installation
 
 ```console
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
+```
+
+# Development
+
+## Code Quality
+
+This project uses `ruff` for linting and formatting:
+
+```console
+# Check for issues
+ruff check .
+
+# Auto-fix what can be fixed
+ruff check --fix .
+
+# Format code
+ruff format .
+
+# Run both check and format
+ruff check --fix . && ruff format .
 ```
 # Find your Area ID
 

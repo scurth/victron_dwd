@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
-import sys
 import getopt
-import json
+import sys
 import time
+from datetime import datetime
+
 import paho.mqtt.client as mqttClient
+
 # Assuming dwd_utils.py is in the same directory or Python path
-from dwd_utils import fetch_dwd_warnings # convert is not directly used by dwd_warning.py anymore
+from dwd_utils import fetch_dwd_warnings  # convert is not directly used by dwd_warning.py anymore
 
 # --- Constants ---
 DEFAULT_DWD_URL = "https://www.dwd.de/DWD/warnungen/warnapp/json/warnings.json"
@@ -14,8 +16,26 @@ DEFAULT_REGION = "112069000" # Potsdam-Mittelmark
 DEFAULT_MQTT_BROKER_IP = "127.0.0.1"
 DEFAULT_MQTT_PORT = 1883
 
-DEFAULT_MINSOC_PAYLOAD = '{"value": 25}'
-ALERT_MINSOC_PAYLOAD = '{"value": 50}'
+# Seasonal MinSOC values (no weather alert)
+# May-August: high solar yield -> low reserve
+# March, April, September: moderate solar yield -> medium reserve
+# October-February: low solar yield -> high reserve
+SEASONAL_MINSOC = {
+    1: 70,   # January
+    2: 50,   # February
+    3: 35,   # March
+    4: 25,   # April
+    5: 15,   # May
+    6: 15,   # June
+    7: 15,   # July
+    8: 15,   # August
+    9: 25,   # September
+    10: 50,  # October
+    11: 50,  # November
+    12: 70,  # December
+}
+
+ALERT_MINSOC = 50  # Override during weather alerts
 
 # Alert criteria (can be moved to config or kept as constants if not user-configurable)
 ALERT_LEVELS = [4, 5] # Levels that trigger action
@@ -25,14 +45,14 @@ ALERT_BUFFER_MS = 2 * 60 * 60 * 1000 # 2 hours in milliseconds
 def usage():
     # (usage function remains largely the same, but ensure it reflects any arg changes if any)
     print("Usage: dwd_warning.py -s SERIAL_NUMBER [-v] [-b BROKER_IP] [-p PORT] [-u DWD_URL] [-r REGION_ID] [-h] [-n]")
-    print(f"-v: verbose output, default False")
+    print("-v: verbose output, default False")
     print(f"-b: MQTT Broker IP, default {DEFAULT_MQTT_BROKER_IP}")
-    print(f"-n: dry run, no MQTT message sent, default False")
+    print("-n: dry run, no MQTT message sent, default False")
     print(f"-p: MQTT Broker Port, default {DEFAULT_MQTT_PORT}")
     print(f"-r: DWD region/WARNCELLID, default {DEFAULT_REGION}")
-    print(f"-s: Victron Serial Number (mandatory)")
+    print("-s: Victron Serial Number (mandatory)")
     print(f"-u: DWD warnings.json URL, default {DEFAULT_DWD_URL}")
-    print(f"-h: shows this help")
+    print("-h: shows this help")
 
 def parse_arguments(argv):
     config = {
@@ -78,26 +98,36 @@ def parse_arguments(argv):
             config["region_id"] = value
         elif name in ("-s", "--serial"):
             config["serial_number"] = value
-    
+
     if config["serial_number"] is None:
         print("Error: Victron Serial Number (-s) is mandatory.", file=sys.stderr)
         usage()
         sys.exit(2)
-        
+
     return config
 
+def get_seasonal_minsoc():
+    """Returns the MinSOC value based on current month."""
+    current_month = datetime.now().month
+    return SEASONAL_MINSOC[current_month]
+
 def determine_minsoc(warning_data, region_id, current_timestamp, verbose_output=False):
+    seasonal_minsoc = get_seasonal_minsoc()
+
+    if verbose_output:
+        print(f"Seasonal MinSOC for month {datetime.now().month}: {seasonal_minsoc}%")
+
     if warning_data is None:
         if verbose_output:
             print("No warning data received from DWD or data was invalid.")
-        return DEFAULT_MINSOC_PAYLOAD
+        return f'{{"value": {seasonal_minsoc}}}'
 
     warnings_for_region = warning_data.get("warnings", {}).get(region_id)
 
     if not warnings_for_region:
         if verbose_output:
             print(f"No specific warning found for region {region_id} in the fetched data.")
-        return DEFAULT_MINSOC_PAYLOAD
+        return f'{{"value": {seasonal_minsoc}}}'
 
     # Assuming the first warning in the list is the most relevant one
     # (as per original script's logic: myregion[0])
@@ -114,24 +144,25 @@ def determine_minsoc(warning_data, region_id, current_timestamp, verbose_output=
     if (warn_type in ALERT_TYPES and
             warn_level in ALERT_LEVELS and
             warn_start_ms is not None and warn_end_ms is not None):
-        
-        effective_start_ms = warn_start_ms - ALERT_BUFFER_MS
+
         effective_end_ms = warn_end_ms + ALERT_BUFFER_MS
 
         # Logic from original script: alert if current time is within buffered window OR buffered start is in future
         # This simplifies to: if the effective end of the warning (including buffer) is after the current time.
         if effective_end_ms > current_timestamp:
+            # Use alert MinSOC, but ensure it's at least as high as seasonal
+            effective_alert_minsoc = max(ALERT_MINSOC, seasonal_minsoc)
             if verbose_output:
-                print(f"Alert conditions met for region {region_id}. Setting MinSoc to alert level.")
-            return ALERT_MINSOC_PAYLOAD
+                print(f"Alert conditions met for region {region_id}. Setting MinSoc to {effective_alert_minsoc}% (alert override).")
+            return f'{{"value": {effective_alert_minsoc}}}'
         else:
             if verbose_output:
                 print(f"Warning for region {region_id} is active but its effective end time has passed.")
     else:
         if verbose_output:
             print(f"Warning for region {region_id} (Level: {warn_level}, Type: {warn_type}) does not meet criteria for action.")
-            
-    return DEFAULT_MINSOC_PAYLOAD
+
+    return f'{{"value": {seasonal_minsoc}}}'
 
 def on_mqtt_publish(client, userdata, result):
     # This callback can be enhanced if verbose is passed or a logger is used.
@@ -152,10 +183,10 @@ def publish_minsoc_to_mqtt(config, topic, minsoc_payload):
 
     try:
         # Corrected client ID to be a simple string as required by Paho MQTT
-        pubclient = mqttClient.Client("dwd_victron_minsoc_setter") 
+        pubclient = mqttClient.Client("dwd_victron_minsoc_setter")
         pubclient.on_publish = on_mqtt_publish
         pubclient.connect(config["broker_ip"], config["broker_port"], 60)
-        
+
         ret = pubclient.publish(topic, minsoc_payload)
         # pubclient.loop() # loop() is blocking. Use loop_start() and loop_stop() for background thread
                          # or rely on publish() for QoS 0 which is mostly fire-and-forget.
@@ -168,10 +199,10 @@ def publish_minsoc_to_mqtt(config, topic, minsoc_payload):
             print(f"Failed to publish MQTT message. Return code: {ret.rc}", file=sys.stderr)
             # pubclient.disconnect() # Disconnect might not be necessary if connect failed or publish failed severely
             return False
-        
+
         if config["verbose"]:
             print(f"MQTT message published successfully (rc: {ret.rc}). Mid: {ret.mid}") # mid is message id
-            
+
         pubclient.disconnect()
         return True
     except ConnectionRefusedError:
@@ -214,7 +245,7 @@ def main(argv=None):
 
     # Publish to MQTT
     mqtt_topic = f"W/{config['serial_number']}/settings/0/Settings/CGwacs/BatteryLife/MinimumSocLimit"
-    
+
     success = publish_minsoc_to_mqtt(config, mqtt_topic, minsoc_payload)
 
     if not success and not config["dry_run"]:

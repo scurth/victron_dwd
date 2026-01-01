@@ -1,2 +1,5 @@
 paho-mqtt~=1.6.1
 urllib3>=1.26.18
+
+# Development dependencies
+ruff>=0.1.0
